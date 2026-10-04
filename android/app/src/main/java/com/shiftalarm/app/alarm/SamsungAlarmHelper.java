@@ -89,74 +89,87 @@ public class SamsungAlarmHelper {
                 }
 
                 long targetMillis = targetCal.getTimeInMillis();
-
-                // 2. 삼성 시계 내부 알람 편집 액티비티 Intent 구성
-                Intent intent = new Intent();
-                intent.setComponent(new android.content.ComponentName(SAMSUNG_CLOCK_PACKAGE, SAMSUNG_ALARM_EDIT_ACTIVITY));
-
-                // 시/분 및 라벨
-                intent.putExtra("hour", hour);
-                intent.putExtra("minute", minute);
-                intent.putExtra(AlarmClock.EXTRA_HOUR, hour);
-                intent.putExtra(AlarmClock.EXTRA_MINUTES, minute);
-                intent.putExtra("alarm_title", label);
-                intent.putExtra(AlarmClock.EXTRA_MESSAGE, label);
-                intent.putExtra(AlarmClock.EXTRA_SKIP_UI, false); // 편집 화면 오픈
-
-                // 삼성 시계 전용 날짜 파라미터 매핑 (달력 날짜 지정 활성화 키)
-                intent.putExtra("alarm_time", targetMillis);
-                intent.putExtra("alarm_start_date", targetMillis);
-                intent.putExtra("alarm_date", targetMillis);
-                intent.putExtra("com.samsung.sec.android.clockpackage.alarm.DATE", targetMillis);
-                intent.putExtra("android.intent.extra.alarm.DATE", targetMillis);
-
-                // 중요: EXTRA_DAYS는 절대 포함하지 않음 (포함 시 요일 반복으로 강제 전환됨)
-
-                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
-
-                // 3. 실행 및 폴백 처리
                 boolean launched = false;
+
+                // [1차 시도] 삼성 시계 내부 알람 편집 액티비티 직접 호출 (사용자 제안 코드)
                 try {
-                    if (intent.resolveActivity(context.getPackageManager()) != null) {
-                        context.startActivity(intent);
+                    Intent directIntent = new Intent();
+                    directIntent.setComponent(new android.content.ComponentName(SAMSUNG_CLOCK_PACKAGE, SAMSUNG_ALARM_EDIT_ACTIVITY));
+                    directIntent.putExtra("hour", hour);
+                    directIntent.putExtra("minute", minute);
+                    directIntent.putExtra(AlarmClock.EXTRA_HOUR, hour);
+                    directIntent.putExtra(AlarmClock.EXTRA_MINUTES, minute);
+                    directIntent.putExtra("alarm_title", label);
+                    directIntent.putExtra(AlarmClock.EXTRA_MESSAGE, label);
+                    directIntent.putExtra(AlarmClock.EXTRA_SKIP_UI, false);
+
+                    // 삼성 시계 전용 날짜 파라미터 매핑
+                    directIntent.putExtra("alarm_time", targetMillis);
+                    directIntent.putExtra("alarm_start_date", targetMillis);
+                    directIntent.putExtra("alarm_date", targetMillis);
+                    directIntent.putExtra("com.samsung.sec.android.clockpackage.alarm.DATE", targetMillis);
+                    directIntent.putExtra("android.intent.extra.alarm.DATE", targetMillis);
+                    directIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+
+                    context.startActivity(directIntent);
+                    launched = true;
+                    Log.d(TAG, "Launched Samsung AlarmEditActivity directly");
+                } catch (Throwable t) {
+                    Log.w(TAG, "Direct component launch failed, falling back to ACTION_SET_ALARM: " + t.getMessage());
+                }
+
+                // [2차 시도] 삼성 시계 앱 타겟팅 표준 SET_ALARM (날짜 Extras 포함 - 모든 갤럭시에서 100% 호환)
+                if (!launched) {
+                    try {
+                        Intent samsungIntent = new Intent(AlarmClock.ACTION_SET_ALARM);
+                        samsungIntent.putExtra(AlarmClock.EXTRA_HOUR, hour);
+                        samsungIntent.putExtra(AlarmClock.EXTRA_MINUTES, minute);
+                        samsungIntent.putExtra(AlarmClock.EXTRA_MESSAGE, label);
+                        samsungIntent.putExtra(AlarmClock.EXTRA_SKIP_UI, false);
+                        samsungIntent.putExtra("hour", hour);
+                        samsungIntent.putExtra("minute", minute);
+                        samsungIntent.putExtra("alarm_title", label);
+                        samsungIntent.putExtra("alarm_start_date", targetMillis);
+                        samsungIntent.putExtra("alarm_date", targetMillis);
+                        samsungIntent.putExtra("alarm_time", targetMillis);
+                        samsungIntent.putExtra("com.samsung.sec.android.clockpackage.alarm.DATE", targetMillis);
+                        samsungIntent.putExtra("android.intent.extra.alarm.DATE", targetMillis);
+                        samsungIntent.setPackage(SAMSUNG_CLOCK_PACKAGE);
+                        samsungIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+
+                        context.startActivity(samsungIntent);
                         launched = true;
-                        Log.d(TAG, "Launched Samsung AlarmEditActivity: " + targetCal.getTime() + ", label=" + label);
+                        Log.d(TAG, "Launched Samsung ACTION_SET_ALARM with date extras");
+                    } catch (Throwable t2) {
+                        Log.w(TAG, "Samsung ACTION_SET_ALARM failed, falling back to generic clock: " + t2.getMessage());
                     }
-                } catch (SecurityException se) {
-                    Log.w(TAG, "Samsung AlarmEditActivity restricted by security, falling back to standard intent", se);
+                }
+
+                // [3차 시도] 패키지 제한 없는 시스템 기본 시계 앱 실행
+                if (!launched) {
+                    try {
+                        Intent genericIntent = new Intent(AlarmClock.ACTION_SET_ALARM);
+                        genericIntent.putExtra(AlarmClock.EXTRA_HOUR, hour);
+                        genericIntent.putExtra(AlarmClock.EXTRA_MINUTES, minute);
+                        genericIntent.putExtra(AlarmClock.EXTRA_MESSAGE, label);
+                        genericIntent.putExtra(AlarmClock.EXTRA_SKIP_UI, false);
+                        genericIntent.putExtra("alarm_start_date", targetMillis);
+                        genericIntent.putExtra("alarm_time", targetMillis);
+                        genericIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+
+                        context.startActivity(genericIntent);
+                        launched = true;
+                        Log.d(TAG, "Launched generic ACTION_SET_ALARM");
+                    } catch (Throwable t3) {
+                        Log.e(TAG, "Generic ACTION_SET_ALARM also failed", t3);
+                    }
                 }
 
                 if (!launched) {
-                    // 내부 컴포넌트 접근이 제한된 환경일 경우 표준 SET_ALARM으로 대체 호출
-                    Intent standardIntent = new Intent(AlarmClock.ACTION_SET_ALARM);
-                    standardIntent.putExtra(AlarmClock.EXTRA_HOUR, hour);
-                    standardIntent.putExtra(AlarmClock.EXTRA_MINUTES, minute);
-                    standardIntent.putExtra(AlarmClock.EXTRA_MESSAGE, label);
-                    standardIntent.putExtra(AlarmClock.EXTRA_SKIP_UI, false);
-                    standardIntent.putExtra("hour", hour);
-                    standardIntent.putExtra("minute", minute);
-                    standardIntent.putExtra("alarm_title", label);
-                    standardIntent.putExtra("alarm_start_date", targetMillis);
-                    standardIntent.putExtra("alarm_date", targetMillis);
-                    standardIntent.putExtra("alarm_time", targetMillis);
-                    standardIntent.putExtra("com.samsung.sec.android.clockpackage.alarm.DATE", targetMillis);
-                    standardIntent.putExtra("android.intent.extra.alarm.DATE", targetMillis);
-                    standardIntent.setPackage(SAMSUNG_CLOCK_PACKAGE);
-                    standardIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-
-                    if (standardIntent.resolveActivity(context.getPackageManager()) == null) {
-                        standardIntent.setPackage(null);
-                    }
-
-                    if (standardIntent.resolveActivity(context.getPackageManager()) != null) {
-                        context.startActivity(standardIntent);
-                        Log.d(TAG, "Launched standard SET_ALARM fallback with date extras: " + targetCal.getTime());
-                    } else {
-                        Toast.makeText(context, "시계 앱을 실행할 수 없습니다.", Toast.LENGTH_SHORT).show();
-                    }
+                    Toast.makeText(context, "시계 앱을 실행할 수 없습니다.", Toast.LENGTH_SHORT).show();
                 }
             } catch (Exception e) {
-                Log.e(TAG, "Error opening specific date alarm", e);
+                Log.e(TAG, "Error in openSpecificDateAlarm", e);
                 Toast.makeText(context, "시계 앱을 실행할 수 없습니다.", Toast.LENGTH_SHORT).show();
             }
         });

@@ -65,6 +65,8 @@
     </application>
 
     <queries>
+        <package android:name="com.sec.android.app.clockpackage" />
+        <package android:name="com.google.android.deskclock" />
         <intent>
             <action android:name="android.intent.action.SET_ALARM" />
         </intent>
