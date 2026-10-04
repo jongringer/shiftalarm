@@ -1,6 +1,6 @@
 {
   "name": "shift-alarm-app",
-  "version": "1.2.8",
+  "version": "1.2.9",
   "description": "4조 3교대 스마트 근무표 및 알람 앱",
   "main": "index.html",
   "scripts": {

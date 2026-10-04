@@ -148,7 +148,37 @@ class ShiftStorage {
   getActiveAlarms() {
     try {
       const data = localStorage.getItem(STORAGE_KEYS.ACTIVE_ALARMS);
-      return data ? JSON.parse(data) : {};
+      if (!data) return {};
+      const alarms = JSON.parse(data);
+      const now = Date.now();
+      let changed = false;
+
+      // 해당 날짜와 시각이 지난 만료된 알람 자동 삭제 처리
+      for (const [dateStr, alarmObj] of Object.entries(alarms)) {
+        if (!dateStr || !dateStr.includes('-')) continue;
+        const [y, m, d] = dateStr.split('-').map(Number);
+        if (!y || !m || !d) continue;
+
+        let hour = 23, minute = 59;
+        if (alarmObj && alarmObj.time && alarmObj.time.includes(':')) {
+          const parts = alarmObj.time.split(':').map(Number);
+          if (!isNaN(parts[0])) hour = parts[0];
+          if (!isNaN(parts[1])) minute = parts[1];
+        }
+
+        const alarmTimestamp = new Date(y, m - 1, d, hour, minute, 0).getTime();
+        // 알람 날짜와 시간 경과 시 자동 제거
+        if (now >= alarmTimestamp) {
+          delete alarms[dateStr];
+          changed = true;
+        }
+      }
+
+      if (changed) {
+        localStorage.setItem(STORAGE_KEYS.ACTIVE_ALARMS, JSON.stringify(alarms));
+      }
+
+      return alarms;
     } catch (e) {
       return {};
     }

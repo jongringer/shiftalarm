@@ -119,6 +119,7 @@ public class ShiftAlarmScheduler {
         List<ShiftAlarmItem> list = new ArrayList<>();
         SharedPreferences prefs = context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE);
         Map<String, ?> all = prefs.getAll();
+        long now = System.currentTimeMillis();
         for (Map.Entry<String, ?> entry : all.entrySet()) {
             if (entry.getKey().startsWith("alarm_") && entry.getValue() instanceof String) {
                 try {
@@ -131,7 +132,12 @@ public class ShiftAlarmScheduler {
                         int h = Integer.parseInt(parts[3]);
                         int min = Integer.parseInt(parts[4]);
                         String shiftType = parts[5];
-                        list.add(new ShiftAlarmItem(id, y, m, d, h, min, shiftType));
+                        ShiftAlarmItem item = new ShiftAlarmItem(id, y, m, d, h, min, shiftType);
+                        if (item.getTriggerTimeMillis() <= now) {
+                            removeAlarmFromPrefs(id); // 지정 날짜/시각 경과 시 자동 삭제
+                        } else {
+                            list.add(item);
+                        }
                     }
                 } catch (Exception e) {
                     Log.e(TAG, "Failed to parse saved alarm: " + entry.getKey(), e);

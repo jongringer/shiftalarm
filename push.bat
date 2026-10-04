@@ -10,8 +10,8 @@ echo [Step 1] Pushing main branch...
 "C:\Program Files\Git\cmd\git.exe" push -u origin main
 
 echo.
-echo [Step 2] Pushing tag v1.2.4...
-"C:\Program Files\Git\cmd\git.exe" push origin v1.2.4
+echo [Step 2] Pushing tags...
+"C:\Program Files\Git\cmd\git.exe" push origin --tags
 
 echo.
 echo ========================================================

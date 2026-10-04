@@ -2778,7 +2778,8 @@ class ShiftApp {
 
     // 2. 일반 웹 브라우저 환경 Fallback (Chrome Intent Schema)
     if (!calledNative) {
-      const intentUri = `intent:#Intent;action=android.intent.action.SET_ALARM;i.android.intent.extra.alarm.HOUR=${hour};i.android.intent.extra.alarm.MINUTES=${minute};S.android.intent.extra.alarm.MESSAGE=${encodeURIComponent(msgText)};B.android.intent.extra.alarm.SKIP_UI=false;al.android.intent.extra.alarm.DAYS=${androidDay};end`;
+      // 삼성 갤럭시 시계 패키지(com.sec.android.app.clockpackage) 타겟팅 및 단발성 날짜 선택 모드 유지(DAYS 파라미터 제외)
+      const intentUri = `intent:#Intent;action=android.intent.action.SET_ALARM;i.android.intent.extra.alarm.HOUR=${hour};i.android.intent.extra.alarm.MINUTES=${minute};S.android.intent.extra.alarm.MESSAGE=${encodeURIComponent(msgText)};B.android.intent.extra.alarm.SKIP_UI=false;S.package=com.sec.android.app.clockpackage;end`;
       try {
         window.location.href = intentUri;
       } catch (e) {

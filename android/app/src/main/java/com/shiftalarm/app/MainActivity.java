@@ -107,45 +107,13 @@ public class MainActivity extends BridgeActivity {
         @JavascriptInterface
         public boolean setAlarm(int hour, int minute, String message, int dayOfWeek) {
             Log.d(TAG, "Native setAlarm requested: " + hour + ":" + minute + ", msg=" + message + ", dayOfWeek=" + dayOfWeek);
-            new Handler(Looper.getMainLooper()).post(() -> {
-                try {
-                    Intent intent = new Intent(AlarmClock.ACTION_SET_ALARM);
-                    intent.putExtra(AlarmClock.EXTRA_HOUR, hour);
-                    intent.putExtra(AlarmClock.EXTRA_MINUTES, minute);
-                    intent.putExtra(AlarmClock.EXTRA_MESSAGE, message);
-
-                    // 일주일 요일(1=일, 2=월, 3=화, 4=수, 5=목, 6=금, 7=토) 적용
-                    if (dayOfWeek >= 1 && dayOfWeek <= 7) {
-                        ArrayList<Integer> days = new ArrayList<>();
-                        days.add(dayOfWeek);
-                        intent.putExtra(AlarmClock.EXTRA_DAYS, days);
-                    }
-
-                    // SKIP_UI를 false로 주어 시계 앱 화면이 열리면서 알람이 100% 저장 등록되도록 설정
-                    intent.putExtra(AlarmClock.EXTRA_SKIP_UI, false);
-                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-
-                    context.startActivity(intent);
-                    Toast.makeText(context, "시계 앱으로 " + message + " (" + hour + ":" + String.format("%02d", minute) + ") 알람 전송", Toast.LENGTH_SHORT).show();
-                } catch (Exception e) {
-                    Log.e(TAG, "Failed to start AlarmClock intent", e);
-                    try {
-                        // Fallback: 시계 앱 알람 목록 직접 열기
-                        Intent fallbackIntent = new Intent(AlarmClock.ACTION_SHOW_ALARMS);
-                        fallbackIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                        context.startActivity(fallbackIntent);
-                        Toast.makeText(context, "시계 앱을 실행합니다.", Toast.LENGTH_SHORT).show();
-                    } catch (Exception ex) {
-                        Log.e(TAG, "Failed fallback to show alarms", ex);
-                        Toast.makeText(context, "시계 앱 실행에 실패했습니다: " + e.getMessage(), Toast.LENGTH_LONG).show();
-                    }
-                }
-            });
+            Integer repeatDay = (dayOfWeek >= 1 && dayOfWeek <= 7) ? dayOfWeek : null;
+            com.shiftalarm.app.alarm.SamsungAlarmHelper.openAlarmEditor(context, hour, minute, message, repeatDay);
             return true;
         }
 
         /**
-         * 1회성 특정 날짜 기반 자체 정밀 알람 등록 및 갤럭시/안드로이드 공식 시계 어플 전송
+         * 1회성 특정 날짜 기반 자체 정밀 알람 등록 및 갤럭시/안드로이드 공식 삼성 시계 어플 전송
          * JS 호출: window.AndroidAlarm.setShiftAlarm(year, month, day, hour, minute, shiftType)
          */
         @JavascriptInterface
@@ -159,18 +127,15 @@ public class MainActivity extends BridgeActivity {
                 com.shiftalarm.app.alarm.ShiftAlarmItem item = new com.shiftalarm.app.alarm.ShiftAlarmItem(alarmId, year, month, day, hour, minute, shiftType);
                 boolean success = scheduler.schedule(item);
 
-                // 2. 갤럭시/안드로이드 삼성 공식 시계 알람 어플(AlarmClock.ACTION_SET_ALARM)로 즉시 전송 및 전달
-                java.util.Calendar cal = java.util.Calendar.getInstance();
-                cal.set(year, month - 1, day);
-                int dayOfWeek = cal.get(java.util.Calendar.DAY_OF_WEEK); // 1=일, 2=월, 3=화, 4=수, 5=목, 6=금, 7=토
-
+                // 2. 갤럭시/안드로이드 삼성 공식 시계 알람 어플(AlarmClock.ACTION_SET_ALARM)로 단발성 날짜 알람 전송
+                // [중요] dayOfWeek 반복(EXTRA_DAYS)을 추가하지 않아야 갤럭시 시계 앱에서 날짜(요일) 단발성 알람 모드로 열립니다.
                 String msgText = String.format("[%d/%d] %s 근무알람", month, day, shiftType);
-                setAlarm(hour, minute, msgText, dayOfWeek);
+                com.shiftalarm.app.alarm.SamsungAlarmHelper.openAlarmEditor(context, hour, minute, msgText, null);
 
                 if (success) {
                     new Handler(Looper.getMainLooper()).post(() -> {
                         String dateStr = String.format("%d월 %d일", month, day);
-                        Toast.makeText(context, "⏰ [" + dateStr + "] " + shiftType + " 알람이 시계 앱 및 스마트폰에 등록되었습니다.", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(context, "⏰ [" + dateStr + "] " + shiftType + " 알람이 삼성 시계 앱 및 스마트폰에 등록되었습니다.", Toast.LENGTH_SHORT).show();
                     });
                 }
                 return true;
