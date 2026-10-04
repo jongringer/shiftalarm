@@ -157,14 +157,12 @@ public class MainActivity extends BridgeActivity {
 
                 new Handler(Looper.getMainLooper()).post(() -> {
                     String msg;
-                    if (result == com.shiftalarm.app.alarm.ClockSyncManager.RESULT_REGISTERED_NOW) {
-                        msg = "⏰ " + label + " → 갤럭시 시계에 등록되었습니다.";
-                    } else if (result == com.shiftalarm.app.alarm.ClockSyncManager.RESULT_QUEUED) {
-                        msg = "📅 " + label + " 예약 완료\n앱 알람은 정확한 날짜에 울리며, 갤럭시 시계에는 전날 자동 등록됩니다.";
+                    if (result == com.shiftalarm.app.alarm.ClockSyncManager.RESULT_EDITOR_OPENED || result == com.shiftalarm.app.alarm.ClockSyncManager.RESULT_REGISTERED_NOW) {
+                        msg = "⏰ " + month + "월 " + day + "일(" + com.shiftalarm.app.alarm.ClockSyncManager.dayName(item) + ") " + shiftType + " 알람\n삼성 시계 앱 알람 화면에서 확인 후 저장을 눌러주세요.";
                     } else {
                         msg = "이미 지난 시각이라 알람을 등록할 수 없습니다.";
                     }
-                    Toast.makeText(context, msg, Toast.LENGTH_LONG).show();
+                    Toast.makeText(context, msg, Toast.LENGTH_SHORT).show();
                 });
                 return success || result != com.shiftalarm.app.alarm.ClockSyncManager.RESULT_EXPIRED;
             } catch (Exception e) {

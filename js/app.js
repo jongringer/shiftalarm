@@ -2778,21 +2778,20 @@ class ShiftApp {
     }
 
     // 2. 일반 웹 브라우저 환경 Fallback (Chrome Intent Schema)
-    //    SET_ALARM 인텐트는 날짜를 받지 않아 '다음 시:분'(오늘/내일)으로 등록되므로,
-    //    목표 시각이 24시간 이내일 때만 전송해야 날짜가 정확합니다.
     if (!calledNative) {
       const targetMs = new Date(y, m - 1, d, hour, minute, 0).getTime();
-      const diffMs = targetMs - Date.now();
-      const withinWindow = diffMs > 0 && diffMs < (24 * 60 - 1) * 60 * 1000;
-      if (withinWindow) {
-        const intentUri = `intent:#Intent;action=android.intent.action.SET_ALARM;i.android.intent.extra.alarm.HOUR=${hour};i.android.intent.extra.alarm.MINUTES=${minute};S.android.intent.extra.alarm.MESSAGE=${encodeURIComponent(msgText)};B.android.intent.extra.alarm.SKIP_UI=false;S.package=com.sec.android.app.clockpackage;end`;
+      // 삼성 시계 AlarmEditActivity 컴포넌트 및 전용 날짜 매핑
+      const samsungIntentUri = `intent:#Intent;component=com.sec.android.app.clockpackage/com.sec.android.app.clockpackage.alarm.activity.AlarmEditActivity;i.hour=${hour};i.minute=${minute};i.android.intent.extra.alarm.HOUR=${hour};i.android.intent.extra.alarm.MINUTES=${minute};S.alarm_title=${encodeURIComponent(msgText)};S.android.intent.extra.alarm.MESSAGE=${encodeURIComponent(msgText)};l.alarm_time=${targetMs};l.alarm_start_date=${targetMs};l.alarm_date=${targetMs};l.com.samsung.sec.android.clockpackage.alarm.DATE=${targetMs};l.android.intent.extra.alarm.DATE=${targetMs};B.android.intent.extra.alarm.SKIP_UI=false;end`;
+      try {
+        window.location.href = samsungIntentUri;
+      } catch (e) {
+        console.warn('Samsung Alarm Intent failed, falling back to standard intent:', e);
+        const fallbackIntentUri = `intent:#Intent;action=android.intent.action.SET_ALARM;i.android.intent.extra.alarm.HOUR=${hour};i.android.intent.extra.alarm.MINUTES=${minute};S.android.intent.extra.alarm.MESSAGE=${encodeURIComponent(msgText)};B.android.intent.extra.alarm.SKIP_UI=false;l.alarm_start_date=${targetMs};l.alarm_time=${targetMs};S.package=com.sec.android.app.clockpackage;end`;
         try {
-          window.location.href = intentUri;
-        } catch (e) {
-          console.warn('Alarm Intent navigation failed:', e);
+          window.location.href = fallbackIntentUri;
+        } catch (e2) {
+          console.warn('Fallback Alarm Intent failed:', e2);
         }
-      } else if (diffMs > 0) {
-        browserGuideMsg = `📅 갤럭시 시계는 날짜 지정을 지원하지 않아 ${m}/${d} 전날(24시간 이내)에 다시 눌러주세요.`;
       }
     }
 

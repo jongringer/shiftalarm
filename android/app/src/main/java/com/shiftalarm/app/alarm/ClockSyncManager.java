@@ -39,26 +39,33 @@ public class ClockSyncManager {
 
     /** 결과 코드 */
     public static final int RESULT_REGISTERED_NOW = 1;
-    public static final int RESULT_QUEUED = 2;
+    public static final int RESULT_QUEUED = 2;          // (구버전 호환용, 더 이상 사용 안 함)
+    public static final int RESULT_EDITOR_OPENED = 3;
     public static final int RESULT_EXPIRED = 0;
 
     /**
-     * 알람 등록 요청. 24시간 이내면 즉시 시계 앱에 등록하고, 아니면 대기열 + 릴레이 예약.
+     * 알람 등록 요청 (사용자 제안 반영: openSpecificDateAlarm 호출)
      */
     public static int request(Context context, ShiftAlarmItem item) {
         long now = System.currentTimeMillis();
         long target = item.getTriggerTimeMillis();
         if (target <= now) return RESULT_EXPIRED;
 
-        if (isInClockWindow(target, now)) {
-            removePending(context, item.getId());
-            sendToClock(context, item);
-            return RESULT_REGISTERED_NOW;
-        }
+        // 이전 버전에서 대기열에 들어간 동일 알람이 있으면 정리 (중복 등록 방지)
+        cancel(context, item.getId());
 
-        savePending(context, item);
-        scheduleRelay(context, item, now);
-        return RESULT_QUEUED;
+        // 삼성 시계 앱 특정 날짜 알람 편집 화면 열기 (월/일/시/분/라벨 및 날짜 파라미터 매핑)
+        SamsungAlarmHelper.openSpecificDateAlarm(
+            context,
+            item.getYear(),
+            item.getMonth(),
+            item.getDay(),
+            item.getHour(),
+            item.getMinute(),
+            buildLabel(item)
+        );
+        Log.d(TAG, "Opened Galaxy clock specific date editor: " + item.getDateText());
+        return RESULT_EDITOR_OPENED;
     }
 
     /** 대기열 중 24시간 이내로 들어온 알람을 시계 앱에 등록. 등록 건수 반환 (앱이 전면에 있을 때 호출) */
