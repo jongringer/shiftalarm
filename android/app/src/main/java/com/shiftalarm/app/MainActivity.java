@@ -36,6 +36,12 @@ public class MainActivity extends BridgeActivity {
             Log.e(TAG, "Error configuring WebView settings", e);
         }
 
+        // Android 13+ 알림 권한 요청 (전날 '갤럭시 시계 등록' 안내 알림 표시용)
+        if (android.os.Build.VERSION.SDK_INT >= 33 &&
+            checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+            requestPermissions(new String[]{android.Manifest.permission.POST_NOTIFICATIONS}, 1001);
+        }
+
         // Android 뒤로가기(Back Button) 이벤트 우선순위 제어
         // 팝업/모달이 열려있으면 팝업만 먼저 닫고, 모두 닫힌 기본 상태에서만 홈 복귀/앱 종료 처리
         getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
@@ -73,6 +79,22 @@ public class MainActivity extends BridgeActivity {
     public void onResume() {
         super.onResume();
         enablePinchZoom();
+        syncPendingClockAlarms();
+    }
+
+    /**
+     * 대기 중인 근무알람 중 24시간 이내로 들어온 것을 갤럭시 시계에 정확한 날짜로 자동 등록
+     * (앱을 열거나, 전날 안내 알림을 탭했을 때 실행)
+     */
+    private void syncPendingClockAlarms() {
+        try {
+            int count = com.shiftalarm.app.alarm.ClockSyncManager.syncDue(this);
+            if (count > 0) {
+                Toast.makeText(this, "⏰ 근무알람 " + count + "건을 갤럭시 시계에 정확한 날짜로 등록했습니다.", Toast.LENGTH_LONG).show();
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Clock sync failed", e);
+        }
     }
 
     private void enablePinchZoom() {
@@ -127,18 +149,24 @@ public class MainActivity extends BridgeActivity {
                 com.shiftalarm.app.alarm.ShiftAlarmItem item = new com.shiftalarm.app.alarm.ShiftAlarmItem(alarmId, year, month, day, hour, minute, shiftType);
                 boolean success = scheduler.schedule(item);
 
-                // 2. 갤럭시/안드로이드 삼성 공식 시계 알람 어플(AlarmClock.ACTION_SET_ALARM)로 단발성 날짜 알람 전송
-                // [중요] dayOfWeek 반복(EXTRA_DAYS)을 추가하지 않아야 갤럭시 시계 앱에서 날짜(요일) 단발성 알람 모드로 열립니다.
-                String msgText = String.format("[%d/%d] %s 근무알람", month, day, shiftType);
-                com.shiftalarm.app.alarm.SamsungAlarmHelper.openAlarmEditor(context, hour, minute, msgText, null);
+                // 2. 갤럭시 시계 등록 (날짜 정확도 보장)
+                //    ACTION_SET_ALARM 은 날짜를 받지 않아 항상 '다음 시:분'(오늘/내일)으로 등록됨.
+                //    → 24시간 이내면 즉시 등록, 그보다 멀면 대기 후 전날 자동 등록 (ClockSyncManager)
+                int result = com.shiftalarm.app.alarm.ClockSyncManager.request(context, item);
+                String label = com.shiftalarm.app.alarm.ClockSyncManager.buildLabel(item);
 
-                if (success) {
-                    new Handler(Looper.getMainLooper()).post(() -> {
-                        String dateStr = String.format("%d월 %d일", month, day);
-                        Toast.makeText(context, "⏰ [" + dateStr + "] " + shiftType + " 알람이 삼성 시계 앱 및 스마트폰에 등록되었습니다.", Toast.LENGTH_SHORT).show();
-                    });
-                }
-                return true;
+                new Handler(Looper.getMainLooper()).post(() -> {
+                    String msg;
+                    if (result == com.shiftalarm.app.alarm.ClockSyncManager.RESULT_REGISTERED_NOW) {
+                        msg = "⏰ " + label + " → 갤럭시 시계에 등록되었습니다.";
+                    } else if (result == com.shiftalarm.app.alarm.ClockSyncManager.RESULT_QUEUED) {
+                        msg = "📅 " + label + " 예약 완료\n앱 알람은 정확한 날짜에 울리며, 갤럭시 시계에는 전날 자동 등록됩니다.";
+                    } else {
+                        msg = "이미 지난 시각이라 알람을 등록할 수 없습니다.";
+                    }
+                    Toast.makeText(context, msg, Toast.LENGTH_LONG).show();
+                });
+                return success || result != com.shiftalarm.app.alarm.ClockSyncManager.RESULT_EXPIRED;
             } catch (Exception e) {
                 Log.e(TAG, "Failed to schedule exact shift alarm", e);
                 return false;
@@ -155,6 +183,7 @@ public class MainActivity extends BridgeActivity {
                 int alarmId = (year * 10000 + month * 100 + day) ^ (hour * 60 + minute);
                 if (alarmId < 0) alarmId = -alarmId;
                 scheduler.cancel(alarmId);
+                com.shiftalarm.app.alarm.ClockSyncManager.cancel(context, alarmId);
                 return true;
             } catch (Exception e) {
                 Log.e(TAG, "Failed to cancel exact shift alarm", e);

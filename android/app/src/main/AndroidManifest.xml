@@ -40,6 +40,11 @@
             android:name=".alarm.AlarmReceiver"
             android:exported="false" />
 
+        <!-- 1-1. 갤럭시 시계 날짜 정확 등록용 전날 릴레이 리시버 -->
+        <receiver
+            android:name=".alarm.ClockSyncReceiver"
+            android:exported="false" />
+
         <!-- 2. 기기 재부팅 수신 리시버 -->
         <receiver
             android:name=".alarm.BootReceiver"

@@ -2759,6 +2759,7 @@ class ShiftApp {
     const msgText = `[${m}/${d}(${dayName})] ${shiftType} 근무알람`;
 
     let calledNative = false;
+    let browserGuideMsg = null;
 
     // 1. APK 네이티브 환경: 자체 1회성 날짜 정밀 알람 & 갤럭시 시계 알람 어플(AlarmClock.ACTION_SET_ALARM) 전송
     if (window.AndroidAlarm) {
@@ -2777,13 +2778,21 @@ class ShiftApp {
     }
 
     // 2. 일반 웹 브라우저 환경 Fallback (Chrome Intent Schema)
+    //    SET_ALARM 인텐트는 날짜를 받지 않아 '다음 시:분'(오늘/내일)으로 등록되므로,
+    //    목표 시각이 24시간 이내일 때만 전송해야 날짜가 정확합니다.
     if (!calledNative) {
-      // 삼성 갤럭시 시계 패키지(com.sec.android.app.clockpackage) 타겟팅 및 단발성 날짜 선택 모드 유지(DAYS 파라미터 제외)
-      const intentUri = `intent:#Intent;action=android.intent.action.SET_ALARM;i.android.intent.extra.alarm.HOUR=${hour};i.android.intent.extra.alarm.MINUTES=${minute};S.android.intent.extra.alarm.MESSAGE=${encodeURIComponent(msgText)};B.android.intent.extra.alarm.SKIP_UI=false;S.package=com.sec.android.app.clockpackage;end`;
-      try {
-        window.location.href = intentUri;
-      } catch (e) {
-        console.warn('Alarm Intent navigation failed:', e);
+      const targetMs = new Date(y, m - 1, d, hour, minute, 0).getTime();
+      const diffMs = targetMs - Date.now();
+      const withinWindow = diffMs > 0 && diffMs < (24 * 60 - 1) * 60 * 1000;
+      if (withinWindow) {
+        const intentUri = `intent:#Intent;action=android.intent.action.SET_ALARM;i.android.intent.extra.alarm.HOUR=${hour};i.android.intent.extra.alarm.MINUTES=${minute};S.android.intent.extra.alarm.MESSAGE=${encodeURIComponent(msgText)};B.android.intent.extra.alarm.SKIP_UI=false;S.package=com.sec.android.app.clockpackage;end`;
+        try {
+          window.location.href = intentUri;
+        } catch (e) {
+          console.warn('Alarm Intent navigation failed:', e);
+        }
+      } else if (diffMs > 0) {
+        browserGuideMsg = `📅 갤럭시 시계는 날짜 지정을 지원하지 않아 ${m}/${d} 전날(24시간 이내)에 다시 눌러주세요.`;
       }
     }
 
@@ -2795,7 +2804,7 @@ class ShiftApp {
     this.renderCalendar();
 
     // 화면 전환을 방해하지 않는 깔끔한 토스트 안내
-    this.showWeatherToast(`⏰ ${m}월 ${d}일(${dayName}) ${shiftType} 알람 (${hour}:${padMinute}) 등록 완료`);
+    this.showWeatherToast(browserGuideMsg || `⏰ ${m}월 ${d}일(${dayName}) ${shiftType} 알람 (${hour}:${padMinute}) 등록 완료`);
   }
 
   executeDismissAlarm() {

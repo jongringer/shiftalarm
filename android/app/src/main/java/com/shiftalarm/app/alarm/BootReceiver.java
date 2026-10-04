@@ -31,6 +31,9 @@ public class BootReceiver extends BroadcastReceiver {
                     Log.d(TAG, "Restored future alarm: ID=" + item.getId() + ", " + item.getDateText() + " [" + item.getShiftType() + "]");
                 }
             }
+
+            // 갤럭시 시계 전날 등록 릴레이도 재예약
+            ClockSyncManager.rescheduleAll(context);
         }
     }
 }
