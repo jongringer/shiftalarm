@@ -1,0 +1,54 @@
+{
+  "version": "1.2.77",
+  "updatedAt": "2026-10-29 03:54:09",
+  "overrides": {
+    "2026-09-17": {
+      "shiftType": "일근대근",
+      "time": "",
+      "alarm": "",
+      "note": ""
+    },
+    "2026-09-18": {
+      "shiftType": "일근휴가",
+      "time": "",
+      "alarm": "",
+      "note": ""
+    },
+    "2026-09-19": {
+      "shiftType": "야근",
+      "time": "",
+      "alarm": "",
+      "note": ""
+    },
+    "2026-10-23": {
+      "shiftType": "일근대근",
+      "time": "",
+      "alarm": "",
+      "note": ""
+    },
+    "2026-10-31": {
+      "shiftType": "일근대근",
+      "time": "",
+      "alarm": "",
+      "note": ""
+    },
+    "2026-11-05": {
+      "shiftType": "일근휴가",
+      "time": "",
+      "alarm": "",
+      "note": ""
+    },
+    "2026-11-12": {
+      "shiftType": "일근대근",
+      "time": "",
+      "alarm": "",
+      "note": ""
+    },
+    "2026-11-20": {
+      "shiftType": "일근대근",
+      "time": "",
+      "alarm": "",
+      "note": ""
+    }
+  }
+}

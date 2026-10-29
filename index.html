@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang=ko>
+<head>
+  <meta charset=UTF-8>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=0.5, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover">
+  <title>4조 3교대 스마트 근무표</title>
+  <meta http-equiv=Cache-Control content=no-cache, no-store, must-revalidate>
+  <meta http-equiv=Pragma content=no-cache>
+  <meta http-equiv=Expires content=0>
+  <meta property=og:type content=website>
+  <meta property=og:site_name content=스마트 근무표>
+  <meta property=og:title content=4조 3교대 스마트 근무표>
+  <meta property=og:description content=최종철 님 맞춤형 교대근무표 (일근·야근·조근·비번 자동 계산 & 특이사항 관리)>
+  <meta property=og:image content=https://kbs-4shift-5855.surge.sh/icons/og-image.png?v=1.2.77.1793246049749>
+  <meta property=og:url content=https://kbs-4shift-5855.surge.sh>
+  <meta name=twitter:card content=summary_large_image>
+  <meta name="theme-color" content="#ffffff">
+  <link rel=stylesheet href=css/style.css?v=1.2.77.1793246049749>
+  <script src=https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js></script>
+  <script>if(typeof pdfjsLib!=='undefined'){pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';}</script>
+  <script src=https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js></script>
+  <script>
+    (function() {
+      try {
+        var savedTheme = localStorage.getItem('kbs_shift_theme') || 'apple-light';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+        var isDark = (savedTheme !== 'apple-light');
+        var metaTheme = document.querySelector('meta[name="theme-color"]');
+        if (metaTheme) metaTheme.setAttribute('content', isDark ? '#0f172a' : '#ffffff');
+        if (window.AndroidAlarm && typeof window.AndroidAlarm.setSystemBarTheme === 'function') {
+          window.AndroidAlarm.setSystemBarTheme(isDark);
+        }
+        var savedBoost = parseInt(localStorage.getItem('transit_time_font_boost') || '0', 10);
+        if (!isNaN(savedBoost) && savedBoost >= 0 && savedBoost <= 10) {
+          document.documentElement.style.setProperty('--time-font-boost', savedBoost + 'px');
+        }
+      } catch(e) {}
+    })();
+  </script>
+
+  <script>
+    window.__APP_VERSION__ = "1.2.77";
+    window.__BUILD_TIMESTAMP__ = 1793246049749;
+    window.__BUILD_DATE__ = "2026-10-29 03:54:09";
+  </script>
+</head>
+<body data-theme=apple-light>
+  <script>
+    (function() {
+      try {
+        var savedTheme = localStorage.getItem('kbs_shift_theme') || 'apple-light';
+        document.body.setAttribute('data-theme', savedTheme);
+        window.addEventListener('DOMContentLoaded', function() {
+          var icon = document.getElementById('themeToggleIcon');
+          var text = document.getElementById('themeToggleText');
+          var btn = document.getElementById('btnThemeToggle');
+          if (savedTheme !== 'apple-light') {
+            if (icon) icon.textContent = '🌙';
+            if (text) text.textContent = '밤 모드';
+            if (btn) { btn.classList.remove('is-day'); btn.classList.add('is-night'); }
+          }
+        });
+      } catch(e) {}
+    })();
+  </script>
+  <main class=app-container>
+    <!-- 첫 화면(1화면): 헤더, 오늘 근무, 달력까지 단독 표출 (교통정보 침범 차단) -->
+    <div class="first-screen-view" id="firstScreenView">
+      <header class=top-header>
+        <div class=profile-pill id=profilePill title="최종철 님">
+          <div class=profile-avatar id=headerAvatar>최</div>
+          <div class=profile-info>
+            <span class=profile-name id=headerName>최종철 님</span>
+            <span class=profile-team id=headerTeam>생방기술1 · 직무 NDC</span>
+          </div>
+        </div>
+        <div class=header-actions>
+          <button type=button class=theme-toggle-single-btn id=btnThemeToggle title="낮 모드 / 밤 모드 전환">
+            <span class=theme-toggle-icon id=themeToggleIcon>☀️</span>
+            <span class=theme-toggle-text id=themeToggleText>낮 모드</span>
+          </button>
+          <button class=header-icon-btn id=btnOpenUploadModalHeader title=근무표 등록 안내>📝</button>
+          <button class=header-icon-btn id=btnOpenSettings title=환경설정>⚙️</button>
+        </div>
+      </header>
+      <section class=today-card>
+        <div class=today-top-section>
+          <div class=today-time-group>
+            <div class=today-date-text id=todayDateText>오늘 날짜 확인 중...</div>
+            <div class=today-clock-wrap>
+              <span class=realtime-clock-pill id=realTimeClock>오후 7:03:00</span>
+            </div>
+          </div>
+          <div class=today-shift-wrap>
+            <div class=today-shift-badge id=todayShiftBadge>근무 확인 중...</div>
+          </div>
+        </div>
+        <div class=today-bottom-section>
+          <div class=today-weather-pill id=todayWeatherPill role=button tabindex=0 title=터치/클릭 시 실시간 날씨 즉시 갱신 (30분 주기 자동 업데이트)>
+            <span class=weather-icon id=weatherIcon>🌤️</span>
+            <span class=weather-text id=weatherText>실시간 날씨 확인 중...</span>
+            <span class=weather-refresh-btn id=weatherRefreshBtn title=실시간 날씨 새로고침>🔄</span>
+            <a href="https://m.search.daum.net/search?q=%EC%97%AC%EC%9D%98%EB%8F%84%EB%8F%99+%EB%82%A0%EC%94%A8&w=tot" target="_self" class="weather-naver-link" id="weatherNaverLink" title="다음 날씨 상세 (뒤로가기 시 앱 복귀)" onclick="event.stopPropagation();">
+              <img src="icons/daum-d.png" alt="다음" class="daum-badge-img"><span class="naver-arrow">↗</span>
+            </a>
+          </div>
+        </div>
+      </section>
+      <section class="month-nav-bar" style="margin-top: 4px; margin-bottom: 6px;">
+        <div class="month-title-wrap">
+          <button type="button" class="btn-home-today" id="btnHomeToday" title="오늘(이번 달)로 바로 이동" onclick="window.app && window.app.goToToday && window.app.goToToday()">🏠</button>
+          <h1 class="month-title" id="monthTitle">2026년 9월 근무표</h1>
+        </div>
+        <div class="month-alarm-wrap" style="display: flex; align-items: center; gap: 6px;">
+          <button type="button" class="btn-shift-alarm btn-sync-refresh" id="btnSyncRefresh" title="근무표 새로고침 & 동기화" style="padding: 6px 10px; background: var(--bg-card, #ffffff); border: 1.5px solid var(--card-border, #cbd5e1); color: var(--text-main) !important; box-shadow: 0 1px 3px rgba(0,0,0,0.08);">
+            <span class="sync-icon" id="syncIcon" style="font-size: 13px; line-height: 1; display: inline-block;">🔄</span>
+          </button>
+          <button type="button" class="btn-shift-alarm" id="btnShiftAlarm" title="선택한 날짜 근무 알람 설정">
+            <span class="shift-alarm-icon">⏰</span>
+            <span class="shift-alarm-text">근무알람</span>
+          </button>
+        </div>
+      </section>
+      <section class="calendar-card" id="calendarCard">
+        <div class="calendar-weekdays">
+          <div class="weekday sun" style="color: #dc2626 !important; font-weight: 800;">일</div>
+          <div class="weekday">월</div>
+          <div class="weekday">화</div>
+          <div class="weekday">수</div>
+          <div class="weekday">목</div>
+          <div class="weekday">금</div>
+          <div class="weekday sat" style="color: #2563eb !important; font-weight: 800;">토</div>
+        </div>
+        <div class="calendar-grid" id="calendarGrid"></div>
+      </section>
+      <!-- 선택된 날짜의 일정 1~2줄 요약 배너 (터치 시 화면 중앙 일정 팝업 호출) -->
+      <div class="calendar-selected-schedule-bar" id="selectedScheduleBar" role="button" tabindex="0" title="터치하여 일정 상세 확인 및 추가">
+        <div class="schedule-bar-icon-wrap">
+          <span class="schedule-bar-icon">📌</span>
+        </div>
+        <div class="schedule-bar-content" id="selectedScheduleContent">
+          <span class="schedule-bar-date-pill" id="selectedScheduleDatePill">오늘 일정</span>
+          <span class="schedule-bar-text" id="selectedScheduleText">등록된 일정이 없습니다 (터치하여 추가 ＋)</span>
+        </div>
+        <div class="schedule-bar-action">
+          <span class="schedule-bar-action-label">상세/추가</span>
+          <span class="schedule-bar-arrow">↗</span>
+        </div>
+      </div>
+    </div>
+    <!-- 2화면(스크롤 시 진입): 실시간 대중교통 -->
+    <section class=transit-widget-card id=transitWidgetSection>
+      <div class=transit-widget-header>
+        <div class=transit-widget-title-wrap>
+          <span style=font-size: 15px;>🚇🚌</span>
+          <h2 class=transit-widget-title>실시간 대중교통</h2>
+        </div>
+        <div class=transit-header-actions>
+          <a href=transit.html target=_blank class=btn-transit-fullscreen>전체화면 ↗</a>
+          <button type=button class=transit-refresh-btn id=btnHeaderReload title=실시간 교통정보 즉시 새로고침>🔄 새로고침</button>
+        </div>
+      </div>
+      <div class=transit-tab-wrap>
+        <button type=button id=tabCommute class=transit-tab-btn active><strong class=highlight-shift-word commute-text>출근</strong></button>
+        <button type=button id=tabOffwork class=transit-tab-btn><strong class=highlight-shift-word offwork-text>퇴근</strong></button>
+      </div>
+      <div id="commuteEstimationSummaryBox" class="commute-estimation-box"></div>
+      <div class=transit-widget-content id=transitCardsContainer style=display: flex; flex-direction: column; gap: 10px;></div>
+      <div id="commuteEstimationDetailBox" class="commute-estimation-box"></div>
+      <div class=transit-footer-bar>
+        <span id=lastUpdated class=transit-update-time>서울시 실시간 버스 연동 활성화</span>
+        <button type=button class=btn-reload-transit id=btnReloadTransit>🔄 새로고침</button>
+      </div>
+    </section>
+    <button type=button class=btn-update-schedule-big id=btnOpenUploadModal>
+      <span>📋</span>
+      <span>근무표 업데이트 (PDF / 사진 등록)</span>
+    </button>
+    <section class=monthly-notes-card id=monthlyNotesSection>
+      <div class=monthly-notes-header>
+        <div class=monthly-notes-title-wrap>
+          <span>📋</span>
+          <h3 class=monthly-notes-title id=monthlyNotesSectionTitle>이달의 특이사항</h3>
+        </div>
+        <button type="button" class="monthly-notes-refresh-btn" id="btnRefreshMonthlyNotes" title="이달의 특이사항 새로고침" onclick="window.app && window.app.refreshMonthlyNotes && window.app.refreshMonthlyNotes(event)">🔄</button>
+      </div>
+      <div id=monthlyNotesList class=monthly-notes-list></div>
+    </section>
+
+    <!-- 실시간 버스 정류장(5자리 ID) 및 지하철역 실시간 도착 전광판 섹터 -->
+    <section class="transit-lookup-card" id="transitLookupSection">
+      <div class="transit-lookup-header transit-lookup-header-stacked">
+        <!-- 1행: 타이틀 한 줄로 시원하게 -->
+        <div class="transit-lookup-title-row">
+          <div style="display:flex; align-items:center; gap:6px;">
+            <span class="transit-lookup-header-icon">🚏🚇</span>
+            <h3 class="transit-lookup-title">실시간 버스 · 지하철 도착정보</h3>
+          </div>
+          <div class="bus-time-zoom-ctrl">
+            <button type="button" class="btn-time-zoom-btn btn-time-zoom-plus" onclick="window.transitManager && window.transitManager.increaseTimeFontSize(event)" title="도착시간 글씨 확대" aria-label="도착시간 글씨 확대">
+              <span class="zoom-btn-icon">＋</span>
+            </button>
+            <button type="button" class="btn-time-zoom-btn btn-time-zoom-reset" onclick="window.transitManager && window.transitManager.resetTimeFontSize(event)" title="도착시간 글씨 원래대로 복귀" aria-label="도착시간 글씨 원래대로 복귀">
+              <span class="zoom-btn-icon">↺</span>
+            </button>
+          </div>
+        </div>
+        <!-- 2행: 부제목(좌측) + TOPIS 직결 및 새로고침 버튼 (우측) -->
+        <div class="transit-lookup-sub-row">
+          <p class="transit-lookup-subtitle">정류장 5자리 ID / 정류소명 / 지하철역 실시간 연동</p>
+          <div class="transit-lookup-header-actions">
+            <span id="transitLookupLiveBadge" class="transit-lookup-live-badge">⚡ TOPIS 직결</span>
+            <button type="button" class="btn-lookup-refresh" id="btnLookupRefresh" title="도착 정보 새로고침">🔄</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 검색 바 영역 -->
+      <div class="lookup-search-container">
+        <div class="lookup-input-wrapper">
+          <span class="lookup-input-icon">🔍</span>
+          <input type="text" id="inputTransitQuery" class="lookup-input" 
+                 placeholder="정류장 5자리 (예: 15158 양정고, 15156 경인초교) 또는 역 이름 (선유, 당산)" 
+                 autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+          <button type="button" id="btnClearLookupQuery" class="btn-clear-query" style="display:none;" title="입력 지우기">✕</button>
+          <button type="button" id="btnExecLookupSearch" class="btn-lookup-search">조회</button>
+        </div>
+
+        <!-- 실시간 검색 추천 / 자동완성 드롭다운 -->
+        <div id="lookupSuggestionsDropdown" class="lookup-suggestions-dropdown" style="display: none;"></div>
+      </div>
+
+      <!-- 빠른 바로가기 칩 (최근 검색 & 주요 정류장/지하철역) -->
+      <div class="lookup-quick-chips-wrap">
+        <span class="quick-chips-label">⚡ 빠른선택:</span>
+        <div class="quick-chips-scroll" id="quickChipsContainer"></div>
+      </div>
+
+      <!-- 실시간 도착 전광판 결과 영역 -->
+      <div id="lookupResultContainer" class="lookup-result-container">
+        <div class="lookup-guide-box" id="lookupGuideBox">
+          <div class="guide-icon">🚏</div>
+          <div class="guide-title">정류장 5자리 번호나 정류소/지하철역을 입력하세요</div>
+          <div class="guide-desc">
+            숫자 5자리(예: <strong>15158</strong> 양정고교, <strong>15156</strong> 경인초교, <strong>15154</strong> 이대병원)를 입력하면 즉시 다음·다다음 버스 도착시간이 전광판으로 나타납니다.<br>
+            <strong>'선유'</strong>나 <strong>'당산'</strong>처럼 이름을 입력하면 지하철역 및 정류소 목록에서 바로 선택할 수 있습니다.
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+  <div class=modal-overlay id=modalUpload>
+    <div class=modal-container>
+      <div class=modal-header>
+        <h3 class=modal-title>📝 근무표 등록 안내</h3>
+        <button class=modal-close-btn id=btnCloseUploadModal>✕</button>
+      </div>
+      <div class=modal-body>
+
+        <p style="font-size: 13px; color: #64748b; margin-bottom: 14px;">근무표 PDF 또는 사진(이미지) 파일을 등록하시면 대근 및 휴가 일정을 자동으로 감지하여 근무표를 업데이트합니다.</p>
+        <div class=upload-options-grid>
+          <button type=button class=upload-option-card id=btnCameraSelect>
+            <span class=upload-opt-icon>📷</span>
+            <span class=upload-opt-title>카메라 촬영</span>
+            <span class=upload-opt-desc>직접 사진 찍기</span>
+          </button>
+          <button type=button class=upload-option-card id=btnGallerySelect>
+            <span class=upload-opt-icon>🖼️</span>
+            <span class=upload-opt-title>갤러리</span>
+            <span class=upload-opt-desc>사진 앨범에서 선택</span>
+          </button>
+          <button type=button class=upload-option-card id=btnFileSelect>
+            <span class=upload-opt-icon>📄</span>
+            <span class=upload-opt-title>파일(PDF)</span>
+            <span class=upload-opt-desc>PDF · 문서 불러오기</span>
+          </button>
+        </div>
+        <input type="file" id="cameraInput" accept="image/*" capture="environment" style="display: none !important;">
+        <input type="file" id="galleryInput" accept="image/*" style="display: none !important;">
+        <input type="file" id="fileInput" accept=".pdf,application/pdf,image/*" style="display: none !important;">
+        <div class=dropzone id=dropzone style="margin-top: 10px;">
+          <div class=dropzone-icon>📁</div>
+          <div class=dropzone-text>또는 파일을 여기에 드래그하여 놓으세요</div>
+          <div class=dropzone-subtext>지원 포맷: PDF, PNG, JPG, JPEG, WEBP</div>
+        </div>
+        <div class="month-special-notes-box" id="monthSpecialNotesBox">
+          <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 8px;">
+            <span style="font-size: 15px;">📌</span>
+            <strong style="font-size: 14px; color: #0f172a; font-weight: 800;" id="specialNotesHeaderTitle">특이사항:</strong>
+          </div>
+          <div id="specialNotesContent" style="width: 100%;"></div>
+        </div>
+        <div class=ocr-progress-box id=ocrProgressBox>
+          <div class=progress-bar-bg><div class=progress-bar-fill id=progressBarFill></div></div>
+          <div class=progress-status-text id=progressStatusText>분석 준비 중...</div>
+        </div>
+        <div id=ocrResultsArea style=display: none; margin-top: 14px;>
+          <h4 style=font-size: 13.5px; font-weight: 700; margin-bottom: 8px; color: #0f172a;>인식된 변동 사항 확인 및 수정</h4>
+          <div style=max-height: 200px; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 8px;>
+            <table class=ocr-results-table>
+              <thead><tr><th style=width: 50px;>날짜</th><th style=width: 110px;>근무 구분</th><th>개인 일정 / 메모</th></tr></thead>
+              <tbody id=ocrResultsTbody></tbody>
+            </table>
+          </div>
+          <p style=font-size: 11px; color: #64748b; margin-top: 6px;>* 각 항목의 근무 구분을 클릭하여 변경할 수 있습니다.</p>
+        </div>
+      </div>
+      <div class=modal-footer>
+        <button type=button class=btn-primary id=btnApplyOcr>근무표에 즉시 반영</button>
+      </div>
+    </div>
+  </div>
+  <div class=modal-overlay id=modalDayEdit>
+    <div class=modal-container style="max-width: 440px; margin: auto;">
+      <div class=modal-header>
+        <h3 class=modal-title id=editDateTitle>근무 및 개인 일정 관리</h3>
+        <button class=modal-close-btn id=btnCloseDayEdit>✕</button>
+      </div>
+      <div class=modal-body style="display: flex; flex-direction: column; gap: 14px; padding: 16px;">
+        <!-- 1. 최상단: 등록된 개인 일정 목록 (크고 시원하게 표출) -->
+        <div class=day-schedule-list-section>
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <span style="font-size: 14px; font-weight: 800; color: var(--text-main); display: flex; align-items: center; gap: 5px;">
+              <span>📌</span> <span>등록된 개인 일정</span> (<span id=dayScheduleCount style="color: var(--primary-blue, #0284c7);">0</span>)
+            </span>
+            <button type=button class=btn-secondary id=btnDeleteSelectedSchedules style="font-size: 11.5px; padding: 4px 9px; color: #dc2626; border-color: #fecaca; display: none;">🗑️ 선택 삭제</button>
+          </div>
+          <div id=dayScheduleItemsContainer class=day-schedule-items-container style="max-height: 220px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px;"></div>
+        </div>
+
+        <!-- 2. 중간: 개인 일정 추가 (시간 선택 + 내용 입력 + 저장) -->
+        <div class=day-schedule-add-box style="background: var(--bg-card); border: 1.5px solid var(--card-border, #cbd5e1); border-radius: 12px; padding: 12px;">
+          <label class=form-label style="font-weight: 800; font-size: 13.5px; margin-bottom: 8px; display: flex; align-items: center; gap: 4px;">
+            <span>➕</span> <span>새 개인 일정 추가</span>
+          </label>
+          <div style="display: flex; gap: 6px; align-items: center; margin-bottom: 8px; flex-wrap: wrap;" id=scheduleTimePickerRow>
+            <span style="font-size: 12.5px; font-weight: 700; color: var(--text-secondary); white-space: nowrap;">⏰ 시간:</span>
+            <select id=editScheduleAmPm class=form-select style="width: auto; min-width: 68px; height: 36px; padding: 4px 8px; font-size: 13px; font-weight: 700;">
+              <option value=오전>오전</option>
+              <option value=오후>오후</option>
+            </select>
+            <select id=editScheduleHour class=form-select style="width: auto; min-width: 70px; height: 36px; padding: 4px 8px; font-size: 13px; font-weight: 700;">
+              <option value="1">1시</option>
+              <option value="2">2시</option>
+              <option value="3">3시</option>
+              <option value="4">4시</option>
+              <option value="5">5시</option>
+              <option value="6">6시</option>
+              <option value="7">7시</option>
+              <option value="8">8시</option>
+              <option value="9" selected>9시</option>
+              <option value="10">10시</option>
+              <option value="11">11시</option>
+              <option value="12">12시</option>
+            </select>
+            <select id=editScheduleMinute class=form-select style="width: auto; min-width: 72px; height: 36px; padding: 4px 8px; font-size: 13px; font-weight: 700;">
+              <option value="00" selected>00분</option>
+              <option value="30">30분</option>
+            </select>
+            <button type=button id=btnEditScheduleTimeClear class=btn-secondary style="height: 36px; padding: 0 10px; font-size: 12px; white-space: nowrap; font-weight: 600;" title="시간 설정 취소 (시간 없이 등록)">시간 없음</button>
+          </div>
+          <div id=editScheduleTimeBadge style="font-size: 11.5px; font-weight: 700; color: #0284c7; background: #e0f2fe; padding: 4px 10px; border-radius: 6px; display: inline-block; margin-bottom: 8px;">
+            ⏰ 설정 시각: <span id=editScheduleTimeBadgeText>오전 09:00</span>
+          </div>
+          <div style="display: flex; gap: 8px; align-items: center;">
+            <input type=text id=editNoteInput class=form-input placeholder="새 일정 내용 입력 (예: 치과 예약, 저녁 약속)" style="flex: 1; height: 40px; font-size: 14px;">
+            <button type=button class=btn-primary id=btnSaveDayEdit style="padding: 0 16px; font-size: 13.5px; font-weight: 800; white-space: nowrap; height: 40px; margin-left: auto;">일정 저장</button>
+          </div>
+        </div>
+
+        <!-- 3. 하단: 근무 형태 변경 (일정 확인/입력 다음으로 배치) -->
+        <div class="day-shift-edit-box" style="background: rgba(100, 116, 139, 0.05); border: 1px dashed var(--card-border, #cbd5e1); border-radius: 10px; padding: 10px 12px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+            <label class=form-label for=editShiftSelect style="font-weight: 700; font-size: 12.5px; margin-bottom: 0; color: var(--text-secondary);">🔄 이 날의 근무 형태 변경</label>
+          </div>
+          <div style="display: flex; gap: 8px; align-items: center;">
+            <select id=editShiftSelect class=form-select style="flex: 1; height: 36px; font-size: 13px;">
+              <option value=일근>일근 (기본)</option>
+              <option value=야근>야근 (기본)</option>
+              <option value=조근>조근 (기본)</option>
+              <option value=비번>비번 (휴무/미표시)</option>
+              <option value=일근대근>⚡ 일근대근 (빨간색)</option>
+              <option value=야근대근>⚡ 야근대근 (빨간색)</option>
+              <option value=조근대근>⚡ 조근대근 (빨간색)</option>
+              <option value=일근휴가>🌿 일근휴가 (녹색)</option>
+              <option value=야근휴가>🌿 야근휴가 (녹색)</option>
+              <option value=조근휴가>🌿 조근휴가 (녹색)</option>
+            </select>
+            <button type=button class=btn-secondary id=btnSaveShiftType style="padding: 0 14px; font-size: 12.5px; font-weight: 700; white-space: nowrap; height: 36px; margin-left: auto;">근무 저장</button>
+          </div>
+        </div>
+      </div>
+      <div class=modal-footer style="justify-content: space-between; border-top: 1px solid #f1f5f9; padding-top: 12px; margin-top: 4px;">
+        <button type=button class=btn-secondary id=btnResetDayEdit style="color: #ef4444; border-color: #fecaca; font-size: 12px;" title="근무 형태와 모든 일정을 기본 교대근무로 초기화">기본값 복원</button>
+        <button type=button class=btn-secondary id=btnCloseDayEditFooter style="padding: 8px 18px; font-size: 13px; font-weight: 700;">닫기</button>
+      </div>
+    </div>
+  </div>
+  <div class=modal-overlay id=modalSettings>
+    <div class=modal-container style=max-width: 400px;>
+      <div class=modal-header>
+        <h3 class=modal-title>⚙️ 사용자 및 교대 기준 설정</h3>
+        <button class=modal-close-btn id=btnCloseSettings>✕</button>
+      </div>
+      <div class=modal-body>
+        <div class=form-group style=margin-bottom: 12px;>
+          <label class=form-label for=inputSettingName>사용자 이름</label>
+          <input type=text id=inputSettingName class=form-input value=최종철 님>
+        </div>
+        <div class=form-group style=margin-bottom: 14px;>
+          <label class=form-label for=inputSettingTeam>소속 및 직무</label>
+          <input type=text id=inputSettingTeam class=form-input value=생방기술1 · 직무 NDC>
+        </div>
+        <div class=form-group style=margin-bottom: 14px;>
+          <label class=form-label for=selectLastMonthEndShift>전달(8월) 마지막 날 근무 지정</label>
+          <select id=selectLastMonthEndShift class=form-select>
+            <option value=조근 selected>조근 (선택 시 다음 달 1일이 '비번'으로 시작 - 현재 설정)</option>
+            <option value=비번>비번 (선택 시 다음 달 1일이 '일근'으로 시작)</option>
+            <option value=일근>일근 (선택 시 다음 달 1일이 '야근'으로 시작)</option>
+            <option value=야근>야근 (선택 시 다음 달 1일이 '조근'으로 시작)</option>
+          </select>
+          <p style=font-size: 11px; color: #64748b; margin-top: 4px;>* 4조 3교대 패턴: [일근 → 야근 → 조근 → 비번] 순으로 자동 순환 계산됩니다.</p>
+        </div>
+        <div class="form-group" style="margin-bottom: 14px; background: rgba(2, 132, 199, 0.05); padding: 12px; border-radius: 12px; border: 1.5px solid rgba(2, 132, 199, 0.2);">
+          <label class="form-label" style="font-weight: 800; color: var(--primary-blue, #0284c7); margin-bottom: 8px; display: flex; align-items: center; gap: 4px;">
+            <span>⏰</span> <span>근무별 알람 시각 설정</span>
+          </label>
+          <div style="display: flex; flex-direction: column; gap: 8px;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <span style="font-size: 13px; font-weight: 700;">일근 알람</span>
+              <input type="time" id="settingAlarmDay" class="form-input" style="width: 130px; height: 34px; padding: 4px 8px; text-align: center; font-weight: 700;" value="06:00">
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <span style="font-size: 13px; font-weight: 700;">야근 알람</span>
+              <input type="time" id="settingAlarmNight" class="form-input" style="width: 130px; height: 34px; padding: 4px 8px; text-align: center; font-weight: 700;" value="15:00">
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <span style="font-size: 13px; font-weight: 700;">조근 알람</span>
+              <input type="time" id="settingAlarmEarly" class="form-input" style="width: 130px; height: 34px; padding: 4px 8px; text-align: center; font-weight: 700;" value="05:20">
+            </div>
+          </div>
+          <p style="font-size: 11px; color: #64748b; margin-top: 6px; margin-bottom: 0;">* 달력에서 해당 날짜 선택 후 [근무알람]을 누르면 안드로이드 시계에 자동 연동됩니다.</p>
+        </div>
+        <div style=border-top: 1px dashed #cbd5e1; padding-top: 12px; margin-top: 12px;>
+          <button type=button class=btn-secondary id=btnResetAllData style=width: 100%; color: #ef4444; border-color: #fecaca; font-size: 12px;>데이터 전체 초기화</button>
+        </div>
+      </div>
+      <div class=modal-footer>
+        <button type=button class=btn-primary id=btnSaveSettings>설정 저장</button>
+      </div>
+    </div>
+  </div>
+  <!-- 근무알람 확인 및 실행 모달 -->
+  <!-- 근무알람 확인 및 실행 모달 -->
+  <div class="modal-overlay" id="modalAlarmPopup">
+    <div class="modal-container" style="max-width: 360px; text-align: center;">
+      <div class="modal-header" style="justify-content: center; border-bottom: none; padding-bottom: 4px;">
+        <h3 class="modal-title" style="font-size: 18px; font-weight: 800; display: flex; align-items: center; gap: 6px; color: var(--text-main);">
+          <span>⏰</span> <span>근무알람 자동 설정</span>
+        </h3>
+      </div>
+      <div class="modal-body" style="padding-top: 6px;">
+        <div id="alarmPopupShiftBadge" style="display: inline-block; padding: 6px 16px; border-radius: 9999px; font-weight: 800; font-size: 14px; margin-bottom: 12px; background: #e0f2fe; color: #0284c7;">
+          9월 28일 (월) 일근
+        </div>
+        <div style="background: var(--bg-card); border: 1.5px solid var(--card-border, #cbd5e1); border-radius: 12px; padding: 14px; margin-bottom: 12px; text-align: left; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+          <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 2px;">설정 알람 시각 (갤럭시 시계 앱)</div>
+          <div id="alarmPopupTargetTime" style="font-size: 22px; font-weight: 800; color: var(--text-main); margin-bottom: 8px;">오전 06:00</div>
+          
+          <div style="background: rgba(239, 68, 68, 0.08); border: 1px dashed rgba(239, 68, 68, 0.4); border-radius: 8px; padding: 8px 10px; margin-bottom: 8px;">
+            <div style="font-size: 11px; color: #dc2626; font-weight: 700; margin-bottom: 2px;">⏰ 어플 자체 알람 (1분 늦게 울림)</div>
+            <div id="alarmPopupSelfTime" style="font-size: 13.5px; font-weight: 800; color: #b91c1c;">오전 06:01 (알람시계 노출 & 터치 시 자동삭제)</div>
+          </div>
+
+          <div style="border-top: 1px dashed #cbd5e1; padding-top: 8px;">
+            <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 2px;">알람 예정 안내</div>
+            <div id="alarmPopupRemainTime" style="font-size: 16px; font-weight: 800; color: #0284c7;">
+              0일 20시간 30분 후에 울립니다
+            </div>
+          </div>
+        </div>
+        <p style="font-size: 12px; color: var(--text-muted); margin: 0 0 8px 0; line-height: 1.45;">
+          등록 시 <strong>갤럭시 시계 앱</strong>에 알람이 맞춰지며, 1분 뒤 <strong>앱 자체 알람시계</strong>가 화면에 울립니다.
+        </p>
+        <button type="button" id="btnTestSelfAlarm" class="btn-secondary" style="font-size: 11.5px; padding: 6px 10px; border-radius: 8px; color: var(--text-muted); width: 100%; border: 1px dashed var(--card-border, #cbd5e1);">
+          🔔 1초 뒤 알람 테스트 (소리 & 알람시계 화면 확인)
+        </button>
+      </div>
+      <div class="modal-footer" style="display: flex; gap: 8px; justify-content: stretch; padding-top: 10px;">
+        <button type="button" class="btn-secondary" id="btnCancelAlarmPopup" style="flex: 1;">닫기</button>
+        <button type="button" class="btn-secondary" id="btnDismissAlarmPopup" style="flex: 1.2; color: #dc2626; border-color: #fecaca; display: none; font-weight: 700;">🔕 알람 해제</button>
+        <button type="button" class="btn-primary" id="btnConfirmAlarmPopup" style="flex: 1.5; background: linear-gradient(135deg, #0284c7, #0369a1); font-weight: 700;">시계 알람 등록</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 어플 자체 알람 울림 팝업 (설정 시각 1분 후 동작 & 알람시계 터치 시 즉시 해제 및 자동 삭제) -->
+  <div class="modal-overlay" id="modalSelfAlarmRing" style="z-index: 100000; background: rgba(15, 23, 42, 0.94); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);">
+    <div class="modal-container" style="max-width: 350px; text-align: center; background: #1e293b; color: #ffffff; border: 2px solid rgba(239, 68, 68, 0.6); box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7); border-radius: 24px; padding: 24px 18px;">
+      
+      <div id="selfAlarmRingBadge" style="display: inline-block; padding: 6px 16px; border-radius: 9999px; font-weight: 800; font-size: 13px; margin-bottom: 12px; background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.4);">
+        근무 알람 (+1분 후 자체 알람 울림)
+      </div>
+      
+      <div style="font-size: 13px; color: #94a3b8; font-weight: 600; margin-bottom: 2px;">자체 어플 알람 울림</div>
+      <div id="selfAlarmRingTime" style="font-size: 36px; font-weight: 900; color: #ffffff; letter-spacing: -0.5px; margin-bottom: 14px; text-shadow: 0 0 15px rgba(239, 68, 68, 0.5);">
+        오전 06:31
+      </div>
+
+      <!-- 터치 가능한 큰 알람시계 모양 (누르면 바로 꺼지고 자동 삭제) -->
+      <div id="btnDismissSelfAlarmClock" class="self-alarm-clock-btn" title="알람 끄기">
+        <span class="self-alarm-clock-icon">⏰</span>
+      </div>
+
+      <div style="font-size: 15px; font-weight: 800; color: #fecaca; margin-top: 8px; margin-bottom: 3px;">
+        알람시계를 누르면 바로 꺼집니다
+      </div>
+      <div style="font-size: 12px; color: #94a3b8; margin-bottom: 18px;">
+        (터치 시 알람 소리가 멈추고 일정이 자동 삭제됩니다)
+      </div>
+
+      <button type="button" id="btnDismissSelfAlarmBar" style="width: 100%; padding: 13px; border-radius: 12px; background: linear-gradient(135deg, #ef4444, #dc2626); color: #ffffff; border: none; font-size: 15px; font-weight: 800; cursor: pointer; box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4); display: flex; align-items: center; justify-content: center; gap: 8px;">
+        <span>⏰</span> <span>알람 끄기 및 자동 삭제</span>
+      </button>
+    </div>
+  </div>
+  <div class=modal-overlay id=modalSummary>
+    <div class=modal-container style=max-width: 380px;>
+      <div class=modal-header>
+        <h3 class=modal-title>📄 월간 근무 통계</h3>
+        <button class=modal-close-btn id=btnCloseSummary>✕</button>
+      </div>
+      <div class=modal-body id=summaryContent></div>
+      <div class=modal-footer>
+        <button type=button class=btn-secondary onclick=window.print()>인쇄 / PDF 저장</button>
+        <button type=button class=btn-primary id=btnCloseSummaryFooter>닫기</button>
+      </div>
+    </div>
+  </div>
+
+
+  <script src=js/shift-engine.js?v=1.2.77.1793246049749></script>
+  <script src=js/storage.js?v=1.2.77.1793246049749></script>
+  <script src=js/ocr-parser.js?v=1.2.77.1793246049749></script>
+  <script src=js/app.js?v=1.2.77.1793246049749></script>
+  <script src=js/timetable-15154.js?v=1.2.77.1793246049749></script>
+  <script src=js/transit.js?v=1.2.77.1793246049749></script>
+  <script src=js/transit-lookup.js?v=1.2.77.1793246049749></script>
+  <script src=js/version-sync.js?v=1.2.77.1793246049749></script>
+  <script src=js/sync-engine.js?v=1.2.77.1793246049749></script>
+</body>
+</html>

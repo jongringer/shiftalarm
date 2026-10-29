@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <defs>
+    <!-- 배경 그림자 -->
+    <filter id="dropShadow" x="-10%" y="-10%" width="130%" height="130%">
+      <feDropShadow dx="0" dy="8" stdDeviation="10" flood-color="#0f172a" flood-opacity="0.3"/>
+    </filter>
+
+    <!-- 본체 그라데이션 -->
+    <linearGradient id="bodyGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="100%" stop-color="#f1f5f9"/>
+    </linearGradient>
+
+    <!-- 캘린더 헤더 그라데이션 -->
+    <linearGradient id="headerGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#ef4444"/>
+      <stop offset="100%" stop-color="#dc2626"/>
+    </linearGradient>
+
+    <!-- 낮/주간 영역 그라데이션 -->
+    <linearGradient id="dayGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fbbf24"/>
+      <stop offset="100%" stop-color="#f97316"/>
+    </linearGradient>
+
+    <!-- 밤/야간 영역 그라데이션 -->
+    <linearGradient id="nightGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#3b82f6"/>
+      <stop offset="100%" stop-color="#1e1b4b"/>
+    </linearGradient>
+  </defs>
+
+  <!-- 캘린더 본체 베이스 플레이트 -->
+  <rect x="28" y="36" width="200" height="194" rx="36" fill="url(#bodyGrad)" filter="url(#dropShadow)"/>
+
+  <!-- 상단 빨간색 헤더 바 -->
+  <path d="M 28 72 C 28 52, 44 36, 64 36 L 192 36 C 212 36, 228 52, 228 72 L 228 84 L 28 84 Z" fill="url(#headerGrad)"/>
+
+  <!-- 바인더 링 2개 -->
+  <rect x="68" y="24" width="16" height="24" rx="8" fill="#94a3b8"/>
+  <rect x="172" y="24" width="16" height="24" rx="8" fill="#94a3b8"/>
+
+  <!-- 주간(낮) 상징 구역 (왼쪽 반원) -->
+  <path d="M 128 102 A 52 52 0 0 0 128 206 Z" fill="url(#dayGrad)"/>
+  
+  <!-- 야간(밤) 상징 구역 (오른쪽 반원) -->
+  <path d="M 128 102 A 52 52 0 0 1 128 206 Z" fill="url(#nightGrad)"/>
+
+  <!-- 주간 상징 태양 (좌측 내부) -->
+  <circle cx="106" cy="154" r="14" fill="#ffffff" opacity="0.95"/>
+  <circle cx="106" cy="154" r="20" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-dasharray="3 4"/>
+
+  <!-- 야간 상징 초승달 (우측 내부) -->
+  <path d="M 146 142 A 15 15 0 1 0 156 166 A 12 12 0 0 1 146 142 Z" fill="#fef08a"/>
+
+  <!-- 순환 교대 화살표 (중앙 회전 링) -->
+  <path d="M 128 92 A 62 62 0 0 1 188 144" fill="none" stroke="#0ea5e9" stroke-width="6" stroke-linecap="round"/>
+  <polygon points="194,142 188,154 180,144" fill="#0ea5e9"/>
+
+  <path d="M 128 216 A 62 62 0 0 1 68 164" fill="none" stroke="#f59e0b" stroke-width="6" stroke-linecap="round"/>
+  <polygon points="62,166 68,154 76,164" fill="#f59e0b"/>
+
+  <!-- 하단 미니 텍스트 라벨 -->
+  <rect x="86" y="196" width="84" height="20" rx="10" fill="#0f172a" opacity="0.85"/>
+  <text x="128" y="210" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="10" font-weight="700" fill="#ffffff" text-anchor="middle">SHIFT</text>
+</svg>
